@@ -14,8 +14,10 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
+use crate::config::MAX_SYSCALL_NUM;
 use crate::loader::{get_app_data, get_num_app};
 use crate::sync::UPSafeCell;
+use crate::timer::get_time_ms;
 use crate::trap::TrapContext;
 use alloc::vec::Vec;
 use lazy_static::*;
@@ -44,6 +46,10 @@ pub struct TaskManager {
 struct TaskManagerInner {
     /// task list
     tasks: Vec<TaskControlBlock>,
+    /// syscall times of tasks
+    syscall_times: Vec<[u32; MAX_SYSCALL_NUM]>,
+    /// the time tasks was first run
+    first_time: Vec<usize>,
     /// id of current `Running` task
     current_task: usize,
 }
@@ -63,6 +69,8 @@ lazy_static! {
             inner: unsafe {
                 UPSafeCell::new(TaskManagerInner {
                     tasks,
+                    syscall_times: Vec::new(),
+                    first_time: Vec::new(),
                     current_task: 0,
                 })
             },
@@ -77,6 +85,7 @@ impl TaskManager {
     /// But in ch4, we load apps statically, so the first task is a real app.
     fn run_first_task(&self) -> ! {
         let mut inner = self.inner.exclusive_access();
+        inner.first_time[0] = get_time_ms();
         let next_task = &mut inner.tasks[0];
         next_task.task_status = TaskStatus::Running;
         let next_task_cx_ptr = &next_task.task_cx as *const TaskContext;
@@ -153,6 +162,18 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
+
+    /// Get the current 'Running' task's syscall times
+    fn get_current_syscall_times(&self) -> [u32; MAX_SYSCALL_NUM] {
+        let inner = self.inner.exclusive_access();
+        inner.syscall_times[inner.current_task].clone()
+    }
+
+    /// Get the current 'Running' task's total running time
+    fn get_current_running_time(&self) -> usize {
+        let inner = self.inner.exclusive_access();
+        get_time_ms() - inner.first_time[inner.current_task]
+    }
 }
 
 /// Run the first task in task list.
@@ -201,4 +222,14 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
 /// Change the current 'Running' task's program break
 pub fn change_program_brk(size: i32) -> Option<usize> {
     TASK_MANAGER.change_current_program_brk(size)
+}
+
+/// Get the current 'Running' task's syscall times
+pub fn current_syscall_times() -> [u32; MAX_SYSCALL_NUM] {
+    TASK_MANAGER.get_current_syscall_times()
+}
+
+/// Get the current 'Running' task's total running time
+pub fn current_running_time() -> usize {
+    TASK_MANAGER.get_current_running_time()
 }
