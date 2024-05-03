@@ -61,16 +61,20 @@ lazy_static! {
         let num_app = get_num_app();
         println!("num_app = {}", num_app);
         let mut tasks: Vec<TaskControlBlock> = Vec::new();
+        let mut syscall_times: Vec<[u32; MAX_SYSCALL_NUM]> = Vec::new();
+        let mut first_time: Vec<usize> = Vec::new();
         for i in 0..num_app {
             tasks.push(TaskControlBlock::new(get_app_data(i), i));
+            syscall_times.push([0; MAX_SYSCALL_NUM]);
+            first_time.push(0);
         }
         TaskManager {
             num_app,
             inner: unsafe {
                 UPSafeCell::new(TaskManagerInner {
                     tasks,
-                    syscall_times: Vec::new(),
-                    first_time: Vec::new(),
+                    syscall_times,
+                    first_time,
                     current_task: 0,
                 })
             },
