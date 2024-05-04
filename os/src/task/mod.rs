@@ -151,6 +151,9 @@ impl TaskManager {
     fn run_next_task(&self) {
         if let Some(next) = self.find_next_task() {
             let mut inner = self.inner.exclusive_access();
+            if inner.first_time[next] == 0 {
+                inner.first_time[next] = get_time_ms();
+            }
             let current = inner.current_task;
             inner.tasks[next].task_status = TaskStatus::Running;
             inner.current_task = next;
@@ -165,6 +168,13 @@ impl TaskManager {
         } else {
             panic!("All applications completed!");
         }
+    }
+
+    /// Increase syscall times of current task
+    fn increase_current_syscall_times(&self, id: usize) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.syscall_times[current][id] = inner.syscall_times[current][id] + 1;
     }
 
     /// Get the current 'Running' task's syscall times
@@ -236,4 +246,9 @@ pub fn current_syscall_times() -> [u32; MAX_SYSCALL_NUM] {
 /// Get the current 'Running' task's total running time
 pub fn current_running_time() -> usize {
     TASK_MANAGER.get_current_running_time()
+}
+
+///
+pub fn increase_current_syscall_times(id: usize) {
+    TASK_MANAGER.increase_current_syscall_times(id);
 }
