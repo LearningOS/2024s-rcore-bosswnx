@@ -188,6 +188,20 @@ impl TaskManager {
         let inner = self.inner.exclusive_access();
         get_time_ms() - inner.first_time[inner.current_task]
     }
+
+    /// mmap
+    fn mmap(&self, start: usize, len: usize, port: usize) -> bool {
+        let mut inner = self.inner.exclusive_access();
+        let current_task = inner.current_task;
+        inner.tasks[current_task].mmap(start, len, port)
+    }
+
+    /// munmap
+    fn munmap(&self, start: usize, len: usize) -> bool {
+        let mut inner = self.inner.exclusive_access();
+        let current_task = inner.current_task;
+        inner.tasks[current_task].munmap(start, len)
+    }
 }
 
 /// Run the first task in task list.
@@ -251,4 +265,16 @@ pub fn current_running_time() -> usize {
 ///
 pub fn increase_current_syscall_times(id: usize) {
     TASK_MANAGER.increase_current_syscall_times(id);
+}
+
+/// Current 'Running' task mmap
+/// true -> success
+/// false -> false
+pub fn mmap_current(start: usize, len: usize, port: usize) -> bool {
+    TASK_MANAGER.mmap(start, len, port)
+}
+
+/// Current 'Running' task munmap
+pub fn munmap_current(start: usize, len: usize) -> bool {
+    TASK_MANAGER.munmap(start, len)
 }

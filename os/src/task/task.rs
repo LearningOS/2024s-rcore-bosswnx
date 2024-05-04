@@ -96,6 +96,32 @@ impl TaskControlBlock {
             None
         }
     }
+    /// map memory
+    pub fn mmap(&mut self, start: usize, len: usize, port: usize) -> bool {
+        if port & !0x7 != 0 {
+            return false;
+        }
+        if port & 0x7 == 0 {
+            return false;
+        }
+        let start_va: VirtAddr = start.into();
+        if !start_va.aligned() {
+            return false;
+        }
+        let end_va = (start + len).into();
+        let port = (port << 1 | 0b10000) as u8;
+        let permission = MapPermission::from_bits(port).unwrap();
+        self.memory_set.insert_framed_area(start_va, end_va, permission)
+    }
+    /// unapply memory
+    pub fn munmap(&mut self, start: usize, len: usize) -> bool {
+        let start_va: VirtAddr = start.into();
+        if !start_va.aligned() {
+            return false;
+        }
+        let end_va: VirtAddr = (start + len).into();
+        self.memory_set.remove(start_va, end_va)
+    }
 }
 
 #[derive(Copy, Clone, PartialEq)]
