@@ -54,11 +54,30 @@ impl MemorySet {
         start_va: VirtAddr,
         end_va: VirtAddr,
         permission: MapPermission,
-    ) {
-        self.push(
-            MapArea::new(start_va, end_va, MapType::Framed, permission),
-            None,
-        );
+    ) -> bool {
+        if self.areas.iter().find(|area| area.is_conflict_with(start_va, end_va)).is_none() {
+            self.push(
+                MapArea::new(start_va, end_va, MapType::Framed, permission),
+                None,
+            );
+            true
+        } else {
+            false
+        }
+    }
+    /// remove a area with start and end virtual address
+    pub fn remove_area_with_va(&mut self, start_va: VirtAddr, end_va: VirtAddr) -> bool {
+        if let Some(idx) = self
+            .areas
+            .iter_mut()
+            .position(|area| area.vpn_range.get_start() == start_va.floor() && area.vpn_range.get_end() == end_va.ceil())
+        {
+            self.areas[idx].unmap(&mut self.page_table);
+            self.areas.remove(idx);
+            true
+        } else {
+            false
+        }
     }
     /// remove a area
     pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
@@ -399,6 +418,13 @@ impl MapArea {
             }
             current_vpn.step();
         }
+    }
+    #[allow(unused)]
+    /// check if area is confilct with given range
+    pub fn is_conflict_with(&self, start_va: VirtAddr, end_va: VirtAddr) -> bool {
+        let start_vpn = start_va.floor();
+        let end_vpn = end_va.ceil();
+        !(start_vpn >= self.vpn_range.get_end() || end_vpn <= self.vpn_range.get_start())
     }
 }
 
