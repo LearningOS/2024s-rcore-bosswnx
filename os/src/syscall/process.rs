@@ -252,7 +252,7 @@ pub fn sys_set_priority(prio: isize) -> isize {
         "kernel:pid[{}] sys_set_priority",
         current_task().unwrap().pid.0
     );
-    if prio < 2 || prio > 20 {
+    if prio < 2 {
         return -1;
     }
     let prio = prio as usize;
@@ -260,5 +260,5 @@ pub fn sys_set_priority(prio: isize) -> isize {
     let mut inner = task.inner_exclusive_access();
     inner.priority = prio;
     inner.pass = BIG_STRIDE / prio;
-    0
+    prio as isize
 }
