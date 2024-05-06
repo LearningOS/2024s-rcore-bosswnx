@@ -1,7 +1,7 @@
 //! Types related to task management & Functions for completely changing TCB
 use super::TaskContext;
 use super::{kstack_alloc, pid_alloc, KernelStack, PidHandle};
-use crate::config::{MAX_SYSCALL_NUM, TRAP_CONTEXT_BASE};
+use crate::config::{BIG_STRIDE, MAX_SYSCALL_NUM, TRAP_CONTEXT_BASE};
 use crate::mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPSafeCell;
 use crate::trap::{trap_handler, TrapContext};
@@ -70,8 +70,17 @@ pub struct TaskControlBlockInner {
     /// syscall times of tasks
     pub syscall_times: [u32; MAX_SYSCALL_NUM],
 
-    /// the time tasks was first run
+    /// the time task was first run
     pub first_time: Option<usize>,
+
+    /// priority
+    pub priority: usize,
+
+    /// stride
+    pub stride: usize,
+
+    /// pass
+    pub pass: usize,
 }
 
 impl TaskControlBlockInner {
@@ -124,6 +133,9 @@ impl TaskControlBlock {
                     program_brk: user_sp,
                     syscall_times: [0; MAX_SYSCALL_NUM],
                     first_time: None,
+                    priority: 16,
+                    stride: 0,
+                    pass: BIG_STRIDE / 16,
                 })
             },
         };
@@ -168,6 +180,9 @@ impl TaskControlBlock {
                     program_brk: user_sp,
                     syscall_times: [0; MAX_SYSCALL_NUM],
                     first_time: None,
+                    priority: 16,
+                    stride: 0,
+                    pass: BIG_STRIDE / 16,
                 })
             },
         });
@@ -249,6 +264,9 @@ impl TaskControlBlock {
                     program_brk: parent_inner.program_brk,
                     syscall_times: parent_inner.syscall_times,
                     first_time: parent_inner.first_time,
+                    priority: parent_inner.priority,
+                    stride: parent_inner.stride,
+                    pass: parent_inner.pass,
                 })
             },
         });
