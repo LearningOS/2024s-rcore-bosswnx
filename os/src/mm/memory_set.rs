@@ -54,18 +54,25 @@ impl MemorySet {
         start_va: VirtAddr,
         end_va: VirtAddr,
         permission: MapPermission,
-    ) -> bool {
-        if self.areas.iter().find(|area| area.is_conflict_with(start_va, end_va)).is_none() {
-            self.push(
-                MapArea::new(start_va, end_va, MapType::Framed, permission),
-                None,
-            );
+    ) {
+        self.push(
+            MapArea::new(start_va, end_va, MapType::Framed, permission),
+            None,
+        );
+    }
+    /// check if exist areas conflict with given virtial address
+    pub fn is_conflict_with_va(&self, start_va: VirtAddr, end_va: VirtAddr) -> bool {
+        if let Some(_) = self
+            .areas
+            .iter()
+            .find(|area| area.is_conflict_with(start_va, end_va))
+        {
             true
         } else {
             false
         }
     }
-    /// remove a area with start and end virtual address
+    /// remove an area with start and end virtual address
     pub fn remove_area_with_va(&mut self, start_va: VirtAddr, end_va: VirtAddr) -> bool {
         if let Some(idx) = self
             .areas
@@ -79,7 +86,7 @@ impl MemorySet {
             false
         }
     }
-    /// remove a area
+    /// remove an area
     pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
         if let Some((idx, area)) = self
             .areas

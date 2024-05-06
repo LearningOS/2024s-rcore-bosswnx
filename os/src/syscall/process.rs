@@ -188,10 +188,11 @@ pub fn sys_mmap(start: usize, len: usize, port: usize) -> isize {
     let permission = MapPermission::from_bits(port).unwrap();
     let task = current_task().unwrap();
     let mut inner = task.inner_exclusive_access();
-    if inner.memory_set.insert_framed_area(start_va, end_va, permission) {
-        0
-    } else {
+    if inner.memory_set.is_conflict_with_va(start_va, end_va) {
         -1
+    } else {
+        inner.memory_set.insert_framed_area(start_va, end_va, permission);
+        0
     }
 }
 
@@ -232,6 +233,7 @@ pub fn sys_spawn(_path: *const u8) -> isize {
         "kernel:pid[{}] sys_spawn NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
+
     -1
 }
 
