@@ -52,7 +52,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     let task = current_task().unwrap();
     let mut inner = task.inner_exclusive_access();
     inner.syscall_times[syscall_id] += 1;
-    drop(inner);  // need drop here, because in sys_*() will get inner again
+    drop(inner);  // need drop inner and task here, because in sys_*() will get inner again
+    drop(task);
     match syscall_id {
         SYSCALL_READ => sys_read(args[0], args[1] as *const u8, args[2]),
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
