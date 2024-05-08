@@ -119,10 +119,10 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
 /// HINT: You might reimplement it with virtual memory management.
 /// HINT: What if [`TimeVal`] is splitted by two pages ?
 pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
-    trace!(
-        "kernel:pid[{}] sys_get_time",
-        current_task().unwrap().pid.0
-    );
+    // trace!(
+    //     "kernel:pid[{}] sys_get_time",
+    //     current_task().unwrap().pid.0
+    // );
     let us = get_time_us();
     let mut v = translated_byte_buffer(current_user_token(), ts as *const u8, size_of::<TimeVal>());
     let mut ts = TimeVal {
@@ -236,11 +236,17 @@ pub fn sys_spawn(path: *const u8) -> isize {
     let token = current_user_token();
     let path = translated_str(token, path);
     if let Some(app_inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
+        trace!("0");
         let task = current_task().unwrap();
+        trace!("1");
         let all_data = app_inode.read_all();
+        trace!("2");
         let new_task = task.spawn(all_data.as_slice());
+        trace!("3");
         let new_pid = new_task.pid.0;
+        trace!("4");
         add_task(new_task);
+        trace!("sys_spawn returen new_pid: {}", new_pid);
         new_pid as isize
     } else {
         -1
