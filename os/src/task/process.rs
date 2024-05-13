@@ -49,6 +49,16 @@ pub struct ProcessControlBlockInner {
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     /// condvar list
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
+    /// enable deadlock detect
+    pub deadlock_detect: bool,
+    /// available list
+    pub available: Vec<u32>,
+    /// allocation matrix
+    pub allocation: Vec<Vec<u32>>,
+    /// nedd matrix
+    pub need: Vec<Vec<u32>>,
+    /// finish list
+    pub finish: Vec<bool>
 }
 
 impl ProcessControlBlockInner {
@@ -119,6 +129,11 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    deadlock_detect: false,
+                    available: Vec::new(),
+                    allocation: Vec::new(),
+                    need: Vec::new(),
+                    finish: Vec::new(),
                 })
             },
         });
@@ -144,6 +159,11 @@ impl ProcessControlBlock {
         // add main thread to the process
         let mut process_inner = process.inner_exclusive_access();
         process_inner.tasks.push(Some(Arc::clone(&task)));
+        let mut res = process_inner.available.clone();
+        res.fill(0);
+        process_inner.allocation.push(res.clone());
+        process_inner.need.push(res.clone());
+        process_inner.finish.push(false);
         drop(process_inner);
         insert_into_pid2process(process.getpid(), Arc::clone(&process));
         // add main thread to scheduler
@@ -245,6 +265,11 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    deadlock_detect: false,
+                    available: Vec::new(),
+                    allocation: Vec::new(),
+                    need: Vec::new(),
+                    finish: Vec::new(),
                 })
             },
         });
@@ -267,6 +292,11 @@ impl ProcessControlBlock {
         // attach task to child process
         let mut child_inner = child.inner_exclusive_access();
         child_inner.tasks.push(Some(Arc::clone(&task)));
+        let mut res = child_inner.available.clone();
+        res.fill(0);
+        child_inner.allocation.push(res.clone());
+        child_inner.need.push(res.clone());
+        child_inner.finish.push(false);
         drop(child_inner);
         // modify kstack_top in trap_cx of this thread
         let task_inner = task.inner_exclusive_access();
